@@ -1188,6 +1188,11 @@ class GatewayInboundMixin:
         if _admitted is None:
             return None
         event, source, is_internal = _admitted
+        if not is_internal:
+            # Optional read-only JustYou identity candidate, after Hermes admission.
+            # This never grants authorization or changes routing/session ownership.
+            from gateway.justyou_identity import annotate_if_configured
+            annotate_if_configured(event)
         # TERMINAL-DECLINE LATCH TEARDOWN. Deliberately placed AFTER admission,
         # not on the adapter's raw inbound: profile routing, the ignored-channel
         # guard, plugin hooks and user authorization all reject events above,
