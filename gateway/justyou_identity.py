@@ -20,7 +20,10 @@ def annotate_admitted_event(event: Any, database: str | Path) -> bool:
     source = event.source
     platform = getattr(getattr(source, "platform", None), "value", None)
     address = getattr(source, "user_id", None)
-    profile = getattr(source, "profile", None) or "default"
+    # Identity binding follows the receiving transport, not the routed runtime.
+    from gateway.session_identity import identity_of
+    routing = identity_of(source)
+    profile = routing.transport_profile if routing else (getattr(source, "profile", None) or "default")
     if not platform or not address or getattr(event, "internal", False):
         return False
     with sqlite3.connect(f"file:{Path(database).resolve()}?mode=ro", uri=True, timeout=3) as connection:
