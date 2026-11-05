@@ -47,3 +47,31 @@ def annotate_if_configured(event: Any) -> bool:
     """No-op by default. Explicit env opt-in only, with existing Hermes auth intact."""
     database = os.environ.get("JUSTYOU_COMM_BINDINGS_DB")
     return annotate_admitted_event(event, database) if database else False
+
+
+
+def diagnostic_reply(event: Any) -> str | None:
+    """Deterministic response for an already admitted user message.
+
+    Caller MUST run Hermes admission, pause gate and pending-control handlers
+    first. This is diagnostic text only and never grants tool authority.
+    """
+    if getattr(event, "internal", False) or not isinstance(getattr(event, "text", None), str):
+        return None
+    if event.text.strip().casefold() != "justyou verify":
+        return None
+    source = event.source
+    platform = getattr(getattr(source, "platform", None), "value", None) or "unknown"
+    binding = event.metadata.get("justyou_identity_candidate_v1", {}) if isinstance(event.metadata, dict) else {}
+    principal = binding.get("principal_id") if isinstance(binding, dict) else None
+    safe_principal = principal if isinstance(principal, str) and principal.isascii() and principal.replace("-", "").replace("_", "").isalnum() and len(principal) <= 64 else "none"
+    return (
+        "JustYou / Hermes diagnose\n"
+        f"Kanal: {platform}\n"
+        "Hermes avsenderkontroll: ADMITTED\n"
+        f"Identitetskandidat: {safe_principal}\n"
+        f"Binding: {'FOUND' if principal else 'NOT_FOUND'}\n"
+        "Avsender kryptografisk verifisert av JustYou: NEI\n"
+        "REHT utførelsestillatelse: IKKE UTSTEDT\n"
+        "Diagnose gir ingen ny handlingsfullmakt."
+    )
