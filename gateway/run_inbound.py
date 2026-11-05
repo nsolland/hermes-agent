@@ -1210,6 +1210,11 @@ class GatewayInboundMixin:
         _reply = await self._hm_pending_reply_intercepts(event, source, _quick_key)
         if _reply is not None:
             return _reply
+        if not is_internal:
+            from gateway.justyou_identity import diagnostic_reply
+            _justyou_diagnostic = diagnostic_reply(event)
+            if _justyou_diagnostic is not None:
+                return _justyou_diagnostic
 
         # Evict a leaked/reaped ``_running_agents`` slot before the busy-session fast-path.
         self._hm_evict_idle_stale_agent(_quick_key)
