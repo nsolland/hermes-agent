@@ -868,6 +868,13 @@ def handle_function_call(
     it (single-fire contract). enabled/disabled_toolsets scope the Tool Search
     bridge catalog to this session's grant (None = unrestricted).
     """
+    # Process-level T3 ACP boundary also protects direct registry dispatch,
+    # bridge tools, skip_pre_tool_call_hook, and delegated calls.
+    from agent.t3_acp_effect_gate import t3_gateway_tool_denial
+
+    mandatory_deny = t3_gateway_tool_denial()
+    if mandatory_deny is not None:
+        return tool_error(mandatory_deny)
     function_args = coerce_tool_args(function_name, function_args)
     if not isinstance(function_args, dict):
         function_args = {}
