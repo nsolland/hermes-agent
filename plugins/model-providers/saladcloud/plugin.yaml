@@ -1,0 +1,5 @@
+name: saladcloud
+kind: model-provider
+version: 1.0.0
+description: SaladCloud AI Gateway provider for Qwen3.6 35B-A3B
+author: SaladCloud
