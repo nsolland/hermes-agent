@@ -2235,6 +2235,11 @@ def invoke_tool(agent, function_name: str, function_args: dict, effective_task_i
     from agent.inline_tool_executors import (
         InlineToolContext, emit_terminal_post_tool_call, resolve_invoke_tool_executor, tool_hook_ids
     )
+    from agent.t3_acp_effect_gate import t3_gateway_tool_denial
+
+    mandatory_deny = t3_gateway_tool_denial()
+    if mandatory_deny is not None:
+        return json.dumps({"error": mandatory_deny}, ensure_ascii=False)
     if not isinstance(function_args, dict):
         function_args = {}
     hook_ids = tool_hook_ids(agent, effective_task_id, tool_call_id)
