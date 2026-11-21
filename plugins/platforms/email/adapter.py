@@ -76,11 +76,16 @@ def _normalize_security(value: Any, default: str = "tls") -> str:
 
 
 def _tls_context(verify: bool, host: str) -> ssl.SSLContext:
-    """Verified context by default; unverified only when explicitly opted out."""
+    """Fail closed: TLS verification cannot be disabled for remote mail servers.
+
+    Allow explicit unverified TLS only for literal loopback development endpoints.
+    A warning alone is insufficient: remote IMAP/SMTP traffic can carry credentials.
+    """
     if verify:
         return ssl.create_default_context()
     if host not in ("127.0.0.1", "::1", "localhost"):
-        logger.warning("TLS verification disabled for non-loopback host %s", host)
+        raise ValueError("EMAIL_REMOTE_TLS_VERIFICATION_REQUIRED")
+    logger.warning("Unverified TLS enabled for local-only email test endpoint")
     return ssl._create_unverified_context()
 
 
