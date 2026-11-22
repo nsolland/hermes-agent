@@ -104,3 +104,36 @@ def test_fast_version_reports_install_method_stamp(tmp_path):
     result = _run_version({"HERMES_HOME": str(home), "TERMUX_VERSION": ""})
     assert result.returncode == 0, result.stderr
     assert "Install method: git" in result.stdout
+
+
+def test_version_fast_path_never_checks_for_updates(monkeypatch):
+    """--version has no network/telemetry side effect, even without extra flags."""
+    import hermes_cli._startup_fast as fast
+
+    calls = []
+    monkeypatch.setattr(fast, "is_termux_env", lambda: False)
+    monkeypatch.setattr(fast, "is_global_fast_version_argv", lambda argv: argv == ["--version"])
+    monkeypatch.setattr(fast, "container_mode_may_be_active", lambda: False)
+    monkeypatch.setattr(fast, "print_fast_version_info",
+                        lambda *, check_updates: calls.append(check_updates))
+    assert fast.try_fast_version(["--version"])
+    assert calls == [False]
+
+
+def test_implicit_update_ignored_without_operator_opt_in(monkeypatch, capsys):
+    """Even callers that pass check_updates=True cannot phone home by default."""
+    import hermes_cli._startup_fast as fast
+
+    monkeypatch.delenv("HERMES_EXPLICIT_UPDATE_STATUS", raising=False)
+    # If the network branch is reached this import will fail, not contact a provider.
+    import sys
+    from types import ModuleType
+
+    blocked = ModuleType("hermes_cli.banner")
+    blocked.format_banner_version_label = lambda: "Hermes test"
+    blocked.check_for_updates = lambda **kwargs: (_ for _ in ()).throw(
+        AssertionError("implicit network check forbidden")
+    )
+    monkeypatch.setitem(sys.modules, "hermes_cli.banner", blocked)
+    fast.print_fast_version_info(check_updates=True)
+    assert "Hermes test" in capsys.readouterr().out
