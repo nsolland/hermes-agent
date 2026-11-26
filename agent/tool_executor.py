@@ -659,6 +659,16 @@ def _dispatch_authorized_once(
         elif callback is not None:
             callback()
 
+    # Mandatory T3 ACP gate. Unlike optional plugin hooks, this never fails open
+    # and never runs user-configured hook code before denying a tool effect.
+    from agent.t3_acp_effect_gate import t3_gateway_tool_denial
+
+    mandatory_deny = t3_gateway_tool_denial()
+    if mandatory_deny is not None:
+        _advance_start_order()
+        state.blocked = True
+        return json.dumps({"error": mandatory_deny}, ensure_ascii=False)
+
     block_message, block_error_type = scope_block, "tool_scope_block"
     if block_message is None:
         block_error_type = "plugin_block"
